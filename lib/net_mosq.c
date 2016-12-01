@@ -406,14 +406,14 @@ int net__try_connect(struct mosquitto *mosq, const char *host, uint16_t port, mo
 
 
 #ifdef WITH_TLS
-void net__print_ssl_error(struct mosquitto *mosq)
+static void net__print_ssl_error(struct mosquitto *mosq, const char* extra_info)
 {
 	char ebuf[256];
 	unsigned long e;
 
 	e = ERR_get_error();
 	while(e){
-		log__printf(mosq, MOSQ_LOG_ERR, "OpenSSL Error: %s", ERR_error_string(e, ebuf));
+		log__printf(mosq, MOSQ_LOG_ERR, "OpenSSL Error (%s): %s", extra_info, ERR_error_string(e, ebuf));
 		e = ERR_get_error();
 	}
 }
@@ -438,11 +438,11 @@ int net__socket_connect_tls(struct mosquitto *mosq)
 			mosq->want_write = true;
 			mosq->want_connect = true;
 		}else{
-			net__print_ssl_error(mosq);
+			net__print_ssl_error(mosq, "connect_tls");
 
 			COMPAT_CLOSE(mosq->sock);
 			mosq->sock = INVALID_SOCKET;
-			net__print_ssl_error(mosq);
+			net__print_ssl_error(mosq, "connect_tls");
 			return MOSQ_ERR_TLS;
 		}
 	}else{
@@ -482,7 +482,7 @@ static int net__init_ssl_ctx(struct mosquitto *mosq)
 				log__printf(mosq, MOSQ_LOG_ERR, "Error: Unable to create TLS context.");
 				COMPAT_CLOSE(mosq->sock);
 				mosq->sock = INVALID_SOCKET;
-				net__print_ssl_error(mosq);
+				net__print_ssl_error(mosq, "init_ssl_ctx");
 				return MOSQ_ERR_TLS;
 			}
 		}
@@ -516,7 +516,7 @@ static int net__init_ssl_ctx(struct mosquitto *mosq)
 				log__printf(mosq, MOSQ_LOG_ERR, "Error: Unable to set TLS ciphers. Check cipher list \"%s\".", mosq->tls_ciphers);
 				COMPAT_CLOSE(mosq->sock);
 				mosq->sock = INVALID_SOCKET;
-				net__print_ssl_error(mosq);
+				net__print_ssl_error(mosq, "init_ssl_ctx");
 				return MOSQ_ERR_TLS;
 			}
 		}
@@ -542,7 +542,7 @@ static int net__init_ssl_ctx(struct mosquitto *mosq)
 #endif
 				COMPAT_CLOSE(mosq->sock);
 				mosq->sock = INVALID_SOCKET;
-				net__print_ssl_error(mosq);
+				net__print_ssl_error(mosq, "init_ssl_ctx");
 				return MOSQ_ERR_TLS;
 			}
 			if(mosq->tls_cert_reqs == 0){
@@ -566,7 +566,7 @@ static int net__init_ssl_ctx(struct mosquitto *mosq)
 #endif
 					COMPAT_CLOSE(mosq->sock);
 					mosq->sock = INVALID_SOCKET;
-					net__print_ssl_error(mosq);
+					net__print_ssl_error(mosq, "init_ssl_ctx");
 					return MOSQ_ERR_TLS;
 				}
 			}
@@ -580,7 +580,7 @@ static int net__init_ssl_ctx(struct mosquitto *mosq)
 #endif
 					COMPAT_CLOSE(mosq->sock);
 					mosq->sock = INVALID_SOCKET;
-					net__print_ssl_error(mosq);
+					net__print_ssl_error(mosq, "init_ssl_ctx");
 					return MOSQ_ERR_TLS;
 				}
 				ret = SSL_CTX_check_private_key(mosq->ssl_ctx);
@@ -588,7 +588,7 @@ static int net__init_ssl_ctx(struct mosquitto *mosq)
 					log__printf(mosq, MOSQ_LOG_ERR, "Error: Client certificate/key are inconsistent.");
 					COMPAT_CLOSE(mosq->sock);
 					mosq->sock = INVALID_SOCKET;
-					net__print_ssl_error(mosq);
+					net__print_ssl_error(mosq, "init_ssl_ctx");
 					return MOSQ_ERR_TLS;
 				}
 			}
@@ -620,7 +620,7 @@ int net__socket_connect_step3(struct mosquitto *mosq, const char *host)
 		if(!mosq->ssl){
 			COMPAT_CLOSE(mosq->sock);
 			mosq->sock = INVALID_SOCKET;
-			net__print_ssl_error(mosq);
+			net__print_ssl_error(mosq, "connect_step3");
 			return MOSQ_ERR_TLS;
 		}
 
@@ -629,7 +629,7 @@ int net__socket_connect_step3(struct mosquitto *mosq, const char *host)
 		if(!bio){
 			COMPAT_CLOSE(mosq->sock);
 			mosq->sock = INVALID_SOCKET;
-			net__print_ssl_error(mosq);
+			net__print_ssl_error(mosq, "connect_step3");
 			return MOSQ_ERR_TLS;
 		}
 		SSL_set_bio(mosq->ssl, bio, bio);
@@ -699,7 +699,7 @@ ssize_t net__read(struct mosquitto *mosq, void *buf, size_t count)
 				mosq->want_write = true;
 				errno = EAGAIN;
 			}else{
-				net__print_ssl_error(mosq);
+				net__print_ssl_error(mosq, "read");
 				errno = EPROTO;
 			}
 #ifdef WIN32
@@ -747,7 +747,7 @@ ssize_t net__write(struct mosquitto *mosq, void *buf, size_t count)
 				mosq->want_write = true;
 				errno = EAGAIN;
 			}else{
-				net__print_ssl_error(mosq);
+				net__print_ssl_error(mosq, "write");
 				errno = EPROTO;
 			}
 #ifdef WIN32
