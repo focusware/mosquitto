@@ -413,6 +413,9 @@ int packet__read(struct mosquitto *mosq)
 	 */
 	if(!mosq->in_packet.command){
 		read_length = net__read(mosq, &byte, 1);
+		if (read_length == -1) {
+			return MOSQ_ERR_SUCCESS;
+		}
 		if(read_length == 1){
 			mosq->in_packet.command = byte;
 #ifdef WITH_BROKER
@@ -449,6 +452,9 @@ int packet__read(struct mosquitto *mosq)
 	if(mosq->in_packet.remaining_count <= 0){
 		do{
 			read_length = net__read(mosq, &byte, 1);
+			if (read_length == -1) {
+				return MOSQ_ERR_SUCCESS;
+			}
 			if(read_length == 1){
 				mosq->in_packet.remaining_count--;
 				/* Max 4 bytes length for remaining length as defined by protocol.
