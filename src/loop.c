@@ -500,13 +500,13 @@ int mosquitto_main_loop(struct mosquitto_db *db, mosq_sock_t *listensock, int li
 #ifndef WIN32
 		sigprocmask(SIG_SETMASK, &sigblock, &origsig);
 #ifdef WITH_EPOLL
-		fdcount = epoll_wait(db->epollfd, events, MAX_EVENTS, 100);
+		fdcount = epoll_wait(db->epollfd, events, MAX_EVENTS, 5);
 #else
-		fdcount = poll(pollfds, pollfd_index, 100);
+		fdcount = poll(pollfds, pollfd_index, 5);
 #endif
 		sigprocmask(SIG_SETMASK, &origsig, NULL);
 #else
-		fdcount = WSAPoll(pollfds, pollfd_index, 100);
+		fdcount = WSAPoll(pollfds, pollfd_index, 5);
 #endif
 #ifdef WITH_EPOLL
 		switch(fdcount){
